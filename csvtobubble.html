@@ -103,16 +103,18 @@
           var nodes = data.map(function(x){
             var i = x[3],
                 r = (Math.sqrt(x[1]/25713))*maxRadius,
-                d = {cluster: i, radius: r};
+                q = x[2],
+                t = x[0],
+                d = {cluster: i, radius: r, label: q, item: t}; // i added in label
             if (!clusters[i] || (r > clusters[i].radius)) clusters[i] = d;
             return d;
           });
 
           d3.layout.pack()
-              .sort(null)
-              .size([width, height])
+              .sort(null) // no sorting of data
+              .size([width, height])  // size of layout to pack circles into
               .children(function(d) { return d.values; })
-              .value(function(d) { return d.radius * d.radius; })
+              .value(function(d) { return d.radius * d.radius; }) // sets area of each circle
               .nodes({values: d3.nest()
                 .key(function(d) { return d.cluster; })
                 .entries(nodes)});
@@ -133,13 +135,26 @@
                     .style("fill", function(d) { return color(d.cluster); })
                     .call(force.drag);
 
+          var labels = svg.selectAll("text")
+                    .data(nodes)
+                    .enter().append("text")
+                    .attr("fill", "white")
+                    .attr("font-size", "6px")
+                    .attr("font-family", "sans-serif")
+                    .call(force.drag);
+
+
+          console.log(nodes);
+
           node.transition()
-              .duration(750)
+              .duration(250)
               .delay(function(d, i) { return i * 5; })
               .attrTween("r", function(d) {
                 var i = d3.interpolate(0, d.radius);
                 return function(t) { return d.radius = i(t); };
               });
+
+                    //node.after("text");
 
           function tick(e) {
             node
@@ -147,6 +162,12 @@
                 .each(collide(.5))
                 .attr("cx", function(d) { return d.x; })
                 .attr("cy", function(d) { return d.y; });
+
+            labels
+                .attr("x", function(d) { return d.x - 2*d.item.length; })
+                .attr("y", function(d) { return d.y; })
+                .text(function(d) { if(d.radius > 15) {return d.item;} });
+
           }
 
           // Move d to be adjacent to the cluster node.
